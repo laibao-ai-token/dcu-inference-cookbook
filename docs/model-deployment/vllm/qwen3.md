@@ -50,13 +50,12 @@ vllm serve Qwen/Qwen3-0.6B \
 
 ```bash
 export VLLM_HCU_USE_CUSTOM_FLASH_ATTN=1
-export VLLM_HCU_USE_PD_SPLIT=1
+export VLLM_HCU_USE_PD_SPLIT=1 #按需开启
 vllm serve Qwen/Qwen3-0.6B \
     -tp 1 \
     --trust-remote-code \
-    --disable-log-requests \
     --dtype bfloat16 \
-    --disable-cascade-attn \
+    --kv-cache-dtype fp8_e5m2 \
     -cc '{"pass_config": {"fuse_act_quant": false}, "custom_ops": ["all"]}'
 ```
 
@@ -64,14 +63,12 @@ vllm serve Qwen/Qwen3-0.6B \
 
 ```bash
 export VLLM_HCU_USE_CUSTOM_FLASH_ATTN=1
-export VLLM_HCU_USE_PD_SPLIT=1
+export VLLM_HCU_USE_PD_SPLIT=1 #按需开启
 
-vllm serve Qwen/Qwen3-0.6B \
+vllm serve Qwen/Qwen3-4B \
     -tp 1 \
     --trust-remote-code \
-    --disable-log-requests \
     --dtype bfloat16 \
-    --disable-cascade-attn \
     --max-num-batched-tokens 10240 \
     --kv-cache-dtype fp8_e5m2 \
     -cc '{"pass_config": {"fuse_act_quant": false}, "custom_ops": ["all"]}'
@@ -86,7 +83,7 @@ export VLLM_USE_PD_SPLIT=0
 vllm serve Qwen/Qwen3-30B-A3B \
   -tp 2 \
   --trust-remote-code \
-  --dtype float16 \
+  --dtype bfloat16 \
   --disable-cascade-attn \
   -cc '{"pass_config": {"fuse_act_quant": false}, "custom_ops": ["all"]}'
 ```
@@ -94,19 +91,22 @@ vllm serve Qwen/Qwen3-30B-A3B \
 ### Qwen3-30B-A3B IFB BW1000 2x vLLM 0.18
 
 ```bash
-export VLLM_HCU_USE_PD_SPLIT=1
+export VLLM_HCU_USE_PD_SPLIT=1 #按需开启
 export VLLM_HCU_USE_CUSTOM_FLASH_ATTN=1
 export VLLM_ROCM_USE_AITER=1
 export VLLM_ROCM_USE_AITER_MOE=1
 vllm serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
     -tp 2 \
     --trust-remote-code \
+    --dtype bfloat16 \
+    --kv-cache-dtype fp8_e5m2 \
     --max-num-batched-tokens 10240 \
 ```
 
 ### Qwen3-235B-A22B-Instruct-2507 IFB BW1100 8x vLLM 0.18
 
 ```bash
+export VLLM_HCU_USE_PD_SPLIT=1 #按需开启
 export VLLM_HCU_USE_CUSTOM_FLASH_ATTN=1
 export VLLM_ROCM_USE_AITER=1
 export VLLM_ROCM_USE_AITER_MOE=1
@@ -115,15 +115,15 @@ vllm serve Qwen/Qwen3-235B-A22B-Instruct-2507 \
     -tp 8 \
     --trust-remote-code \
     --dtype bfloat16 \
+    --kv-cache-dtype fp8_e4m3 \
     --gpu-memory-utilization 0.95 \
-    --max-model-len 40960 \
-    --max-num-batched-tokens 10240 \
-    --disable-cascade-attn
+    --max-num-batched-tokens 10240
 ```
 
 ### Qwen3-235B-A22B-Instruct-2507 IFB BW1000 8x vLLM 0.18
 
 ```bash
+export VLLM_HCU_USE_PD_SPLIT=1 #按需开启
 export VLLM_HCU_USE_CUSTOM_FLASH_ATTN=1
 export VLLM_ROCM_USE_AITER=1
 export VLLM_ROCM_USE_AITER_MOE=1
@@ -132,10 +132,10 @@ vllm serve Qwen/Qwen3-235B-A22B-Instruct-2507 \
     -tp 8 \
     --trust-remote-code \
     --dtype bfloat16 \
+    --kv-cache-dtype fp8_e5m2 \
     --gpu-memory-utilization 0.95 \
     --max-model-len 40960 \
-    --max-num-batched-tokens 10240 \
-    --disable-cascade-attn
+    --max-num-batched-tokens 10240
 ```
 
 ### Qwen3-235B-A22B-Instruct-2507 IFB BW1100 8x vLLM 0.15
@@ -151,7 +151,7 @@ export VLLM_RANK6_NUMA=3
 export VLLM_RANK7_NUMA=3
 
 vllm serve Qwen/Qwen3-235B-A22B-Instruct-2507 \
-  --dtype float16 \
+  --dtype bfloat16 \
   --trust-remote-code \
   -tp 8 \
   --disable-cascade-attn 
@@ -256,7 +256,7 @@ vllm serve Qwen/Qwen3-4B-Thinking-2507 \
 
 | 环境变量 | 值 | 对总吞吐 | 对 TPOT | 说明 |
 |---------|---|---------|---------|------|
-| `VLLM_USE_PD_SPLIT` | `1`（默认） | 友好 | 不友好 | PD 分离调度，prefill 独占 step，decode 被饿死 |
+| `VLLM_USE_PD_SPLIT` | `1`（默认） | 友好 | 不友好 | PD 分离调度，首个 prefill chunk 独占 step，后续 chunk 和 decode 混合执行 |
 | `VLLM_USE_PD_SPLIT` | `0` | 不友好 | 友好 | 混合调度，decode 不被 prefill 阻塞 |
 | `VLLM_USE_PIECEWISE` | `1` | 友好 | 不友好 | 分段 CUDA Graph，适配动态 batch，吞吐稳定 |
 | `VLLM_USE_PIECEWISE` | `0`（默认） | 不友好 | 友好 | 整块 CUDA Graph，执行开销小，单步延迟低 |
